@@ -1,0 +1,8 @@
+[data.csv]
+# Fasteners
+
+# Dowels
+[data.csv.dowel_table]
+    dir = "fasteners/dowels/"
+    file = "dowels.csv"
+    schema = "dowels_schema.toml"

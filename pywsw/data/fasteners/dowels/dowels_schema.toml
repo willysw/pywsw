@@ -1,0 +1,8 @@
+Type = 'str'
+Subtype = 'str'
+Size = 'str'
+D = 'float'
+D_r = 'float'
+L = 'float'
+L_thread = 'float'
+Fyb = 'float'

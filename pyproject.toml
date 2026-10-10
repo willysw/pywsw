@@ -1,0 +1,21 @@
+[build-system]
+requires = [
+    "setuptools"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pywsw"
+version = "0.0.1"
+dependencies = [
+    "rich",
+    "numpy",
+    "scipy",
+    "pandas",
+]
+
+[tool.setuptools]
+packages = ["pywsw"]
+
+[project.scripts]
+pywsw = "pywsw.cli:cli_app"
