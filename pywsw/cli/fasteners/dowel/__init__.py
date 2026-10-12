@@ -1,3 +1,3 @@
-from .dowel import dowel_cli
+from .dowel import DowelCliApp
 
-__all__ = ('dowel_cli',)
+__all__ = ("DowelCliApp",)

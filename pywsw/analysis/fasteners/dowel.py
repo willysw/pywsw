@@ -1,5 +1,6 @@
 from collections.abc import Iterable
-from dataclasses import InitVar, dataclass, field, KW_ONLY
+from dataclasses import InitVar, dataclass, field
+from enum import StrEnum
 from math import inf
 from typing import NamedTuple, overload
 
@@ -25,20 +26,28 @@ class FailureModes(NamedTuple):
 
 @dataclass
 class Dowel:
+    class MATERIAL_TYPE(StrEnum):
+        WOOD = "wood"
+        STEEL = "steel"
+        CONCRETE = "concrete"
+
     d: float
     f_yb: float
     l_s: float
     l_m: float
     double_shear: bool = False
+
+    type_s: MATERIAL_TYPE = field(default=MATERIAL_TYPE.WOOD, repr=False)
     sg_s: float = field(default=0.5, repr=False)
     theta_s: float = field(default=90.0, repr=False)
+    type_m: MATERIAL_TYPE = field(default=MATERIAL_TYPE.WOOD, repr=False)
     sg_m: float = field(default=0.5, repr=False)
     theta_m: float = field(default=90.0, repr=False)
-    KW_ONLY
-    use_radians: bool = field(default=False, repr=False)
-    strict: bool = field(default=True, repr=False)
-    theta: InitVar[float | None] = field(init=True, default=None)
-    sg: InitVar[float | None ] = field(init=True, default=None)
+
+    use_radians: bool = field(default=False, repr=False, kw_only=True)
+    strict: bool = field(default=True, repr=False, kw_only=True)
+    theta: InitVar[float | None] = field(init=True, default=None, kw_only=True)
+    sg: InitVar[float | None] = field(init=True, default=None, kw_only=True)
 
     def __post_init__(self, theta: float | None, sg: float | None) -> None:
         if theta is not None:
@@ -51,23 +60,35 @@ class Dowel:
 
     @property
     def Fe_s(self) -> float:
-        return self.calc_Fe(
-                self.d, 
-                self.sg_s, 
-                self.theta_s, 
-                use_radians=self.use_radians, 
-                strict=self.strict
-            )
+        match self.type_s:
+            case Dowel.MATERIAL_TYPE.STEEL:
+                return 87000.0
+            case Dowel.MATERIAL_TYPE.CONCRETE:
+                return 45000.0
+            case _:
+                return self.calc_Fe(
+                    self.d,
+                    self.sg_s,
+                    self.theta_s,
+                    use_radians=self.use_radians,
+                    strict=self.strict,
+                )
 
     @property
     def Fe_m(self) -> float:
-        return self.calc_Fe(
-                self.d, 
-                self.sg_m, 
-                self.theta_m, 
-                use_radians=self.use_radians,
-                strict=self.strict,
-            )
+        match self.type_s:
+            case Dowel.MATERIAL_TYPE.STEEL:
+                return 87000.0
+            case Dowel.MATERIAL_TYPE.CONCRETE:
+                return 45000.0
+            case _:
+                return self.calc_Fe(
+                    self.d,
+                    self.sg_m,
+                    self.theta_m,
+                    use_radians=self.use_radians,
+                    strict=self.strict,
+                )
 
     @property
     def R_e(self) -> float:
@@ -126,8 +147,12 @@ class Dowel:
         if sg is not None:
             sg_m, sg_s = sg, sg
 
-        f_es = cls.calc_Fe(d, sg_s, theta_s, use_radians=use_radians, strict=strict)
-        f_em = cls.calc_Fe(d, sg_m, theta_m, use_radians=use_radians, strict=strict)
+        f_es = cls.calc_Fe(
+            d, sg_s, theta_s, use_radians=use_radians, strict=strict
+        )
+        f_em = cls.calc_Fe(
+            d, sg_m, theta_m, use_radians=use_radians, strict=strict
+        )
         r_d = cls.calc_Rd(d, strict=strict)
         r_e, r_t = f_em / f_es, l_m / l_s
         k = cls.calc_k(r_e, r_t, d, f_yb, f_em, l_s, l_m)
@@ -138,9 +163,12 @@ class Dowel:
                 zIs=float(2 * (d * l_s * f_es) / r_d[1]),
                 zII=inf,
                 zIIIm=inf,
-                zIIIs=float(2 * (k[3] * d * l_s * f_es) / ((1 + 2 * r_e) * r_d[3])),
+                zIIIs=float(
+                    2 * (k[3] * d * l_s * f_es) / ((1 + 2 * r_e) * r_d[3])
+                ),
                 zIV=float(
-                    (2 * d**2 / r_d[4]) * np.sqrt((2 / 3) * ((f_em * f_yb) / (1 + r_e)))
+                    (2 * d**2 / r_d[4])
+                    * np.sqrt((2 / 3) * ((f_em * f_yb) / (1 + r_e)))
                 ),
             )
         else:
@@ -151,7 +179,8 @@ class Dowel:
                 zIIIm=float((k[2] * d * l_m * f_em) / ((1 + 2 * r_e) * r_d[3])),
                 zIIIs=float((k[3] * d * l_s * f_es) / ((1 + 2 * r_e) * r_d[3])),
                 zIV=float(
-                    (d**2 / r_d[4]) * np.sqrt((2 / 3) * ((f_em * f_yb) / (1 + r_e)))
+                    (d**2 / r_d[4])
+                    * np.sqrt((2 / 3) * ((f_em * f_yb) / (1 + r_e)))
                 ),
             )
 
@@ -188,7 +217,9 @@ class Dowel:
         l_m: float,
     ) -> np.ndarray:
         k1 = (
-            np.sqrt(r_e + 2 * (r_e**2) * (1 + r_t + r_t**2) + (r_t**2) * (r_e**3))
+            np.sqrt(
+                r_e + 2 * (r_e**2) * (1 + r_t + r_t**2) + (r_t**2) * (r_e**3)
+            )
             - (r_e * (1 + r_t))
         ) / (1 + r_e)
 
@@ -220,7 +251,9 @@ class Dowel:
             and 0.50 inches. Defaults to `True`.
         """
         if strict:
-            rd_small = np.interp(d, (0.17, 0.25), (2.2, 3.0), left=2.2, right=3.0)
+            rd_small = np.interp(
+                d, (0.17, 0.25), (2.2, 3.0), left=2.2, right=3.0
+            )
             rd1 = np.where(d <= 0.25, rd_small, 4.0)
             rd2 = np.where(d <= 0.25, rd_small, 3.6)
             rd3 = np.where(d <= 0.25, rd_small, 3.2)
@@ -237,12 +270,14 @@ class Dowel:
     def fyb_by_diameter(d: float, *, strict: bool = True) -> float: ...
     @overload
     @staticmethod
-    def fyb_by_diameter(d: Iterable[float], *, strict: bool = True) -> np.ndarray: ...
+    def fyb_by_diameter(
+        d: Iterable[float], *, strict: bool = True
+    ) -> np.ndarray: ...
     @staticmethod
     def fyb_by_diameter(
-            d: float | Iterable[float], 
-            *, 
-            strict: bool = True,
+        d: float | Iterable[float],
+        *,
+        strict: bool = True,
     ) -> float | np.ndarray:
         """Calculate the default bending yield stress given the fastener diameter.
 
@@ -261,15 +296,25 @@ class Dowel:
         """
         # NDS T12L(2), T12J(2)
         dia = np.asarray(d)
-        DIA = np.array((-np.inf, 0.142, 0.177, 0.236, 0.273, 0.3125, 0.375, np.inf))
+        DIA = np.array(
+            (-np.inf, 0.142, 0.177, 0.236, 0.273, 0.3125, 0.375, np.inf)
+        )
         FYB = np.array(
-            (100000.0, 100000.0, 90000.0, 80000.0, 70000.0, 60000.0, 45000.0, 45000.0)
+            (
+                100000.0,
+                100000.0,
+                90000.0,
+                80000.0,
+                70000.0,
+                60000.0,
+                45000.0,
+                45000.0,
+            )
         )
         if strict:
             fyb = FYB[np.searchsorted(DIA, dia)]
         else:
             fyb = np.interp(dia, DIA, FYB)
-
 
         if fyb.size > 1:
             return fyb

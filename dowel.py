@@ -1,5 +1,5 @@
-from rich import print
+from rich import print  # noqa
 
-from pywsw.cli.fasteners.dowel import dowel_cli
+from pywsw.cli.fasteners.dowel import DowelCliApp
 
-dowel_cli(args_in=[])
+DowelCliApp().run_app([])

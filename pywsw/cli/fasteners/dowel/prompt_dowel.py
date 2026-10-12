@@ -3,12 +3,13 @@ import math
 import pandas as pd
 from rich.console import Console
 from rich.panel import Panel
-from rich.prompt import FloatPrompt, Prompt
+from rich.prompt import Confirm, FloatPrompt, Prompt
 from rich.table import Table
 
 from pywsw.analysis.fasteners import Dowel
 from pywsw.data import DataLoader
-from .dowel_types import DowelFastener
+
+from .dowel_types import DowelFastener, DowelInfo
 
 
 def load_dowel_list() -> pd.DataFrame:
@@ -46,7 +47,11 @@ def _ask_generic(dwl: DowelFastener, console: Console) -> DowelFastener:
     )
     l_thread = l_thread if l_thread else math.nan
     return DowelFastener(
-        diameter=d, inner_diameter=d_r, fyb=fyb, length=l, thread_length=l_thread
+        diameter=d,
+        root_diameter=d_r,
+        fyb=fyb,
+        length=l,
+        thread_length=l_thread,
     )
 
 
@@ -68,7 +73,9 @@ def _ask_subtype(
         return dwl, df
 
 
-def _print_size_table(dwl: DowelFastener, df: pd.DataFrame, console: Console) -> None:
+def _print_size_table(
+    dwl: DowelFastener, df: pd.DataFrame, console: Console
+) -> None:
     fields: dict[str, tuple[str, ...]] = {
         "Size": ("Size", ""),
         "D": ("Outer Diam", "0.4f"),
@@ -81,7 +88,9 @@ def _print_size_table(dwl: DowelFastener, df: pd.DataFrame, console: Console) ->
         if all(df[k].isna()) or all(df[k] == ""):
             del fields[k]
 
-    title_text = f"{dwl.type!s}, {dwl.subtype!s}" if dwl.subtype else f"{dwl.type!s}"
+    title_text = (
+        f"{dwl.type!s}, {dwl.subtype!s}" if dwl.subtype else f"{dwl.type!s}"
+    )
     tab_out = Table(
         expand=True,
         row_styles=("dim", ""),
@@ -120,20 +129,54 @@ def _ask_size(
     return dwl._replace(size=size), df.loc[df["Size"] == size]
 
 
+def _ask_if_empty_fyb(dowel: DowelFastener, console: Console) -> DowelFastener:
+    if math.isnan(dowel.fyb):
+        return dowel._replace(
+            fyb=FloatPrompt.ask(
+                "Specify bending yield stress Fyb (psi)",
+                default=Dowel.fyb_by_diameter(dowel.diameter),
+                console=console,
+            )
+        )
+    return dowel
+
+
 def _get_data(dwl: DowelFastener, df: pd.DataFrame) -> DowelFastener:
     dowel = df[df["Size"] == dwl.size].iloc[0]
     return dwl._replace(
         diameter=dowel["D"].item() if pd.notna(dowel["D"]) else math.nan,
-        inner_diameter=dowel["D_r"].item() if pd.notna(dowel["D_r"]) else math.nan,
+        root_diameter=dowel["D_r"].item()
+        if pd.notna(dowel["D_r"])
+        else math.nan,
         length=dowel["L"].item() if pd.notna(dowel["L"]) else math.nan,
         thread_length=(
-            dowel["L_thread"].item() if pd.notna(dowel["L_thread"]) else math.nan
+            dowel["L_thread"].item()
+            if pd.notna(dowel["L_thread"])
+            else math.nan
         ),
         fyb=dowel["Fyb"].item() if pd.notna(dowel["Fyb"]) else math.nan,
     )
 
 
-def ask_load_dowel(console: Console | None = None) -> DowelFastener:
+def _ask_which_diameter(
+    dowel: DowelFastener, console: Console
+) -> DowelFastener:
+    if (
+        not math.isnan(dowel.diameter)
+        and not math.isnan(dowel.root_diameter)
+        and not math.isclose(
+            dowel.diameter, dowel.root_diameter, abs_tol=0.0001
+        )
+    ):
+        use_root_diameter = Confirm.ask(
+            "Use root diameter?", default=True, console=console
+        )
+        return dowel._replace(use_root_diameter=use_root_diameter)
+    else:
+        return dowel._replace(use_root_diameter=False)
+
+
+def ask_load_dowel(console: Console | None = None) -> DowelInfo:
     console = Console() if console is None else console
 
     console.rule(title="Fastener", style="bold")
@@ -149,4 +192,15 @@ def ask_load_dowel(console: Console | None = None) -> DowelFastener:
     _print_size_table(dwl, df, console)
     dwl, df = _ask_size(dwl, df, console)
 
-    return _get_data(dwl, df)
+    # Fill out parameters from the database
+    dwl = _get_data(dwl, df)
+
+    # Ask which diameter to use
+    dwl = _ask_which_diameter(dwl, console)
+
+    # Ask for fyb if fyb is NAN
+    dwl = _ask_if_empty_fyb(dwl, console)
+
+    double_shear = Confirm.ask("Double shear?", default=False, console=console)
+
+    return DowelInfo(fastener=dwl._replace(double_shear=double_shear))

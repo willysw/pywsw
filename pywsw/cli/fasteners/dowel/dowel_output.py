@@ -5,34 +5,10 @@ from typing import Any
 
 from rich.align import Align
 from rich.console import Console, Group
-from rich.layout import Layout
 from rich.panel import Panel
 from rich.table import Table
 
-from .dowel_types import DowelInfo
-
-"""
-╭─────────────────── 'fastener' (63 x ? ) ────────────────────╮
-│                                                             │
-│                   Layout(name='fastener')                   │
-│                                                             │
-╰─────────────────────────────────────────────────────────────╯
-╭───── 'main' (31 x ? ) ──────╮╭────── 'side' (32 x ? ) ──────╮
-│                             ││                              │
-│     Layout(name='main')     ││     Layout(name='side')      │
-│                             ││                              │
-╰─────────────────────────────╯╰──────────────────────────────╯
-╭──────────────────── 'factors' (63 x ? ) ────────────────────╮
-│                                                             │
-│                   Layout(name='factors')                    │
-│                                                             │
-╰─────────────────────────────────────────────────────────────╯
-╭─────────────────── 'capacity' (63 x 7) ─────────────────────╮
-│                                                             │
-│                   Layout(name='capacity')                   │
-│                                                             │
-╰─────────────────────────────────────────────────────────────╯
-"""
+from .dowel_types import DowelInfo, DowelMember
 
 
 def _format_item(obj, tag, fmt, unit) -> tuple[str, str]:
@@ -65,18 +41,6 @@ def _add_item_rows(
     return grid
 
 
-def _make_layout() -> Layout:
-    layout = Layout(name="root")
-    layout.split_column(
-        Layout(name="fastener", size=4),
-        Layout(name="members", size=4),
-        Layout(name="factors", size=5),
-        Layout(name="capacity", size=7),
-    )
-    layout["members"].split_row(Layout(name="main"), Layout(name="side"))
-    return layout
-
-
 def _fastener_panel(info: DowelInfo) -> Panel:
     if info.fastener.type:
         title = (
@@ -93,7 +57,7 @@ def _fastener_panel(info: DowelInfo) -> Panel:
 
     items = (
         (info.fastener.diameter, "D", "0.4f", "in"),
-        (info.fastener.inner_diameter, "Dr", "0.4f", "in"),
+        (info.fastener.root_diameter, "Dr", "0.4f", "in"),
         (info.fastener.fyb, "Fyb", "0.1f", "psi"),
         (info.fastener.length, "L", "0.3f", "in"),
         (info.fastener.thread_length, "Lt", "0.3f", "in"),
@@ -103,14 +67,15 @@ def _fastener_panel(info: DowelInfo) -> Panel:
     return Panel(grid, title=title, style="bold")
 
 
-def _member_panel(info: DowelInfo, member_id: str) -> Panel:
-    title = f"{member_id.capitalize()} Member"
+def _member_panel(info: DowelInfo, which: DowelMember.MemberType) -> Panel:
 
-    member, fe = (
-        (info.main, info.dowel.Fe_m)
-        if member_id.lower() == "main"
-        else (info.side, info.dowel.Fe_s)
+    member, fe, material = (
+        (info.main, info.dowel.Fe_m, info.dowel.type_m)
+        if which == DowelMember.MemberType.MAIN
+        else (info.side, info.dowel.Fe_s, info.dowel.type_s)
     )
+
+    title = f"{which.name.capitalize()} Member ({material.name.capitalize()})"
 
     items = (
         (member.thickness, "l", "0.3f", "in"),
@@ -158,7 +123,9 @@ def _capacity_panel(info: DowelInfo) -> Panel:
     grid = _add_item_rows(grid, items, 3)
 
     res = Align.center(
-        Panel.fit(f"Z'={cap.z:0.2f} governed by mode {cap.mode!s}", style="cyan bold")
+        Panel.fit(
+            f"Z'={cap.z:0.2f} governed by mode {cap.mode!s}", style="cyan bold"
+        )
     )
     return Panel(Group(grid, res), title="Capacity", style="bold")
 
@@ -169,12 +136,14 @@ def print_dowel_output(
 ) -> None:
     console = Console() if console is None else console
 
-    layout = _make_layout()
+    console.print(_fastener_panel(info))
 
-    layout["fastener"].update(_fastener_panel(info))
-    layout["main"].update(_member_panel(info, "main"))
-    layout["side"].update(_member_panel(info, "side"))
-    layout["factors"].update(_factor_panel(info))
-    layout["capacity"].update(_capacity_panel(info))
+    members = Table.grid(expand=True)
+    members.add_row(
+        _member_panel(info, DowelMember.MemberType.MAIN),
+        _member_panel(info, DowelMember.MemberType.SIDE),
+    )
+    console.print(members)
 
-    console.print(layout)
+    console.print(_factor_panel(info))
+    console.print(_capacity_panel(info))
