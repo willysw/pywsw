@@ -3,10 +3,10 @@ import math
 import pandas as pd
 from rich.console import Console
 from rich.panel import Panel
-from rich.prompt import Confirm, FloatPrompt, Prompt
 from rich.table import Table
 
 from pywsw.analysis.fasteners import Dowel
+from pywsw.cli.prompt import Confirm, FloatPrompt, Prompt
 from pywsw.data import DataLoader
 
 from .dowel_types import DowelFastener, DowelInfo

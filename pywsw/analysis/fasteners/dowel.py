@@ -6,6 +6,35 @@ from typing import NamedTuple, overload
 
 import numpy as np
 
+_FAILURE_MODE_DESC = {
+    "zIm": "ZIm: Translation and bearing limit in main member.",
+    "zIs": "ZIs: Translation and bearing limit in side member.",
+    "zII": "ZII: Rigid rotation, bearing limit in all members.",
+    "zIIIm": "ZIIIm: Rotation and bearing limit in main member, hinge in side member.",
+    "zIIIs": "ZIIIs: Rotation and bearing limit in side member, hinge in main member.",
+    "zIV": "ZIV: Rotation and bearing limit between members, hinge in main and side members",
+}
+
+_LIMIT_MODE_DIAGRAM_SINGLE_SHEAR = r"""
+╭────────────────────────────────────────────────────────────────────╮
+│                     LIMIT MODES (SINGLE SHEAR)                     │
+├────────────────────────────────────────────────────────────────────┤
+│               ZIm                ZIs              ZII              │
+│         ━━━━━━━││━━┓       ━━━━━>>││━━┓       ━━━>>\\━━━━┓         │
+│  Side          ││  ┃            >>││  ┃             \\   ┃         │
+│  ╌╌╌╌╌╌╌━━━━┳━━││<<┻━━━━╌╌╌━━━━┳>>││━━┻━━━━╌╌╌━━━━┳>>\\<<┻━━━━╌╌╌  │
+│  Main       ┃  ││<<            ┃  ││              ┃   \\           │
+│             ┗━━││<<━━━━━       ┗━━││━━━━━━━       ┗━━━━\\<<━━━     │
+│                                                                    │
+│               ZIIIm            ZIIIs               ZIV             │
+│         ━━━━━━━││━━┓       ━━━>>\\━━━━┓       ━━━━━━││━━━┓         │
+│  Side          ││  ┃             \\   ┃             \\   ┃         │
+│  ╌╌╌╌╌╌╌━━━━┳>>\\━━┻━━━━╌╌╌━━━━┳━━\\<<┻━━━━╌╌╌━━━━┳>>\\<<┻━━━━╌╌╌  │
+│  Main       ┃   \\             ┃   \\             ┃   \\           │
+│             ┗━━━━\\<<━━━       ┗━━━││━━━━━━       ┗━━━││━━━━━━     │
+╰────────────────────────────────────────────────────────────────────╯
+"""
+
 
 class FailureModes(NamedTuple):
     zIm: float
@@ -18,6 +47,10 @@ class FailureModes(NamedTuple):
     @property
     def mode(self) -> str:
         return self._fields[self.index(min(self))]
+
+    @property
+    def mode_desc(self) -> str:
+        return _FAILURE_MODE_DESC[self.mode]
 
     @property
     def z(self) -> float:
@@ -76,7 +109,7 @@ class Dowel:
 
     @property
     def Fe_m(self) -> float:
-        match self.type_s:
+        match self.type_m:
             case Dowel.MATERIAL_TYPE.STEEL:
                 return 87000.0
             case Dowel.MATERIAL_TYPE.CONCRETE:
@@ -163,9 +196,7 @@ class Dowel:
                 zIs=float(2 * (d * l_s * f_es) / r_d[1]),
                 zII=inf,
                 zIIIm=inf,
-                zIIIs=float(
-                    2 * (k[3] * d * l_s * f_es) / ((1 + 2 * r_e) * r_d[3])
-                ),
+                zIIIs=float(2 * (k[3] * d * l_s * f_em) / ((2 + r_e) * r_d[3])),
                 zIV=float(
                     (2 * d**2 / r_d[4])
                     * np.sqrt((2 / 3) * ((f_em * f_yb) / (1 + r_e)))
@@ -177,7 +208,7 @@ class Dowel:
                 zIs=float((d * l_s * f_es) / r_d[1]),
                 zII=float((k[1] * d * l_s * f_es) / r_d[2]),
                 zIIIm=float((k[2] * d * l_m * f_em) / ((1 + 2 * r_e) * r_d[3])),
-                zIIIs=float((k[3] * d * l_s * f_es) / ((1 + 2 * r_e) * r_d[3])),
+                zIIIs=float((k[3] * d * l_s * f_em) / ((2 + r_e) * r_d[3])),
                 zIV=float(
                     (d**2 / r_d[4])
                     * np.sqrt((2 / 3) * ((f_em * f_yb) / (1 + r_e)))

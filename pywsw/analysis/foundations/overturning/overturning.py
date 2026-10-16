@@ -10,10 +10,10 @@ from scipy.optimize import shgo as scipy_shgo
 
 from pywsw.core import parse_as_ndarray
 
-_1_6 = 1.0/6.0
-_1_3 = 1.0/3.0
-_1_2 = 1.0/2.0
-_2_3 = 2.0/3.0
+_1_6 = 1.0 / 6.0
+_1_3 = 1.0 / 3.0
+_1_2 = 1.0 / 2.0
+_2_3 = 2.0 / 3.0
 
 
 @dataclass(frozen=True)
@@ -76,6 +76,7 @@ class Overturning:
     outside_footing : bool
         Returns true if the net soil pressure reaction is outside of the footing.
     """
+
     toe_length: float
     heel_length: float
     bearing_length: float
@@ -86,7 +87,7 @@ class Overturning:
     toe_super_unit_load: float = 0.0
     heel_super_unit_load: float = 0.0
     unit_weight: float = 150.0
-    optimize_solution: OptimizeResult|None = field(default=None, repr=False)
+    optimize_solution: OptimizeResult | None = field(default=None, repr=False)
 
     """''''''''''''''''"""
     """   PROPERTIES   """
@@ -108,7 +109,7 @@ class Overturning:
             W=self.superimposed_load,
             w_t=self.toe_super_unit_load,
             w_h=self.heel_super_unit_load,
-            gamma_c=self.unit_weight
+            gamma_c=self.unit_weight,
         )
 
     @cached_property
@@ -123,7 +124,7 @@ class Overturning:
             W=self.superimposed_load,
             w_t=self.toe_super_unit_load,
             w_h=self.heel_super_unit_load,
-            gamma_c=self.unit_weight
+            gamma_c=self.unit_weight,
         )
 
     @cached_property
@@ -132,24 +133,17 @@ class Overturning:
 
     @cached_property
     def volume(self) -> float:
-        return (
-            self.width
-            * self.height
-            * self.length
-        )
+        return self.width * self.height * self.length
 
     @cached_property
     def weight(self) -> float:
-        return self.volume*self.unit_weight
+        return self.volume * self.unit_weight
 
     @cached_property
     def superimposed_weight(self) -> float:
-        return (
-            self.superimposed_load
-            + self.width * (
-                self.toe_length*self.toe_super_unit_load
-                + self.heel_length*self.heel_super_unit_load
-            )
+        return self.superimposed_load + self.width * (
+            self.toe_length * self.toe_super_unit_load
+            + self.heel_length * self.heel_super_unit_load
         )
 
     @cached_property
@@ -161,27 +155,34 @@ class Overturning:
         # Resisting Moment
         mr = (
             # Toe surcharge moment
-            _1_2*self.width*self.toe_super_unit_load*self.toe_length**2,
+            _1_2 * self.width * self.toe_super_unit_load * self.toe_length**2,
             # Super load moment
-            self.superimposed_load*(self.toe_length + _1_2*self.bearing_length),
+            self.superimposed_load
+            * (self.toe_length + _1_2 * self.bearing_length),
             # Heel surcharge moment
-            _1_2*self.width*self.heel_super_unit_load*self.heel_length*(self.length - _1_2*self.heel_length),
+            _1_2
+            * self.width
+            * self.heel_super_unit_load
+            * self.heel_length
+            * (self.length - _1_2 * self.heel_length),
             # Footing weight moment
-            _1_2*self.weight*self.length,
+            _1_2 * self.weight * self.length,
         )
         return sum(mr)
 
     @cached_property
     def reaction_offset_from_toe(self) -> float:
-        return (self.resisting_moment - self.overturning_moment)/self.total_weight
+        return (
+            self.resisting_moment - self.overturning_moment
+        ) / self.total_weight
 
     @cached_property
     def eccentricity(self) -> float:
-        return _1_2*self.length - self.reaction_offset_from_toe
+        return _1_2 * self.length - self.reaction_offset_from_toe
 
     @cached_property
     def relative_eccentricity(self) -> float:
-        return self.eccentricity/self.length
+        return self.eccentricity / self.length
 
     @cached_property
     def outside_middle_third(self) -> bool:
@@ -201,22 +202,22 @@ class Overturning:
 
     @classmethod
     def optimize(
-            cls,
-            toe_length: float|Iterable[float],
-            heel_length: float|Iterable[float],
-            height: float|Iterable[float],
-            width: float|Iterable[float],
-            bearing_length: float,
-            overturning_moment: float,
-            superimposed_load: float = 0,
-            allow_bearing_pressure: float = 1500.0,
-            min_safety_factor: float = 1.5,
-            toe_super_unit_load: float = 0.0,
-            heel_super_unit_load: float = 0.0,
-            unit_weight: float = 150.0,
-            force_centered: bool = False,
-            max_iterations: int = 3,
-            max_samples: int = 100,
+        cls,
+        toe_length: float | Iterable[float],
+        heel_length: float | Iterable[float],
+        height: float | Iterable[float],
+        width: float | Iterable[float],
+        bearing_length: float,
+        overturning_moment: float,
+        superimposed_load: float = 0,
+        allow_bearing_pressure: float = 1500.0,
+        min_safety_factor: float = 1.5,
+        toe_super_unit_load: float = 0.0,
+        heel_super_unit_load: float = 0.0,
+        unit_weight: float = 150.0,
+        force_centered: bool = False,
+        max_iterations: int = 3,
+        max_samples: int = 100,
     ) -> "Overturning":
         """
         Find optimum footing dimensions for given design criteria.
@@ -267,8 +268,9 @@ class Overturning:
         result : Overturning
             Result of the optimization.
         """
-        toe_length, heel_length, height, width = \
-            parse_as_ndarray(toe_length, heel_length, height, width, scalar_dims=1)
+        toe_length, heel_length, height, width = parse_as_ndarray(
+            toe_length, heel_length, height, width, scalar_dims=1
+        )
 
         # boundary (geometry) constraints
         bounds = cls._make_bounds(toe_length, heel_length, height, width)  # pyright: ignore[reportArgumentType]
@@ -283,7 +285,7 @@ class Overturning:
                 superimposed_load=superimposed_load,
                 toe_super_unit_load=toe_super_unit_load,
                 heel_super_unit_load=heel_super_unit_load,
-                unit_weight=unit_weight
+                unit_weight=unit_weight,
             )
 
         # partial design functions
@@ -293,33 +295,39 @@ class Overturning:
             "W": superimposed_load,
             "w_t": toe_super_unit_load,
             "w_h": heel_super_unit_load,
-            "gamma_c": unit_weight
+            "gamma_c": unit_weight,
         }
 
-        fS = (lambda X:
-            cls.calc_stability(X[0], X[1], h=X[2], b=X[3], **fkwargs) - min_safety_factor)
+        fS = lambda X: (
+            cls.calc_stability(X[0], X[1], h=X[2], b=X[3], **fkwargs)
+            - min_safety_factor
+        )
 
-        fB = (lambda X:
-            allow_bearing_pressure - cls.calc_bearing(X[0], X[1], h=X[2], b=X[3], **fkwargs)[0])
+        fB = lambda X: (
+            allow_bearing_pressure
+            - cls.calc_bearing(X[0], X[1], h=X[2], b=X[3], **fkwargs)[0]
+        )
 
-        fCtr = lambda X: -(X[0]-X[1])**2
+        fCtr = lambda X: -((X[0] - X[1]) ** 2)
 
-        fObjective = lambda X: (X[0]+X[1]+bearing_length)*X[2]*X[3] # Volume
+        fObjective = lambda X: (
+            (X[0] + X[1] + bearing_length) * X[2] * X[3]
+        )  # Volume
 
         # nonlinear (stability, bearing) constraints
         if force_centered:
             constraints = (
-                {'type': 'ineq', 'fun': fS},
-                {'type': 'ineq', 'fun': fB},
-                {'type': 'ineq', 'fun': fCtr}
+                {"type": "ineq", "fun": fS},
+                {"type": "ineq", "fun": fB},
+                {"type": "ineq", "fun": fCtr},
             )
         else:
             constraints = (
-                {'type': 'ineq', 'fun': fS},
-                {'type': 'ineq', 'fun': fB}
+                {"type": "ineq", "fun": fS},
+                {"type": "ineq", "fun": fB},
             )
 
-        solution = scipy_shgo( # type: ignore
+        solution = scipy_shgo(  # type: ignore
             func=fObjective,
             bounds=bounds,
             constraints=constraints,  # pyright: ignore[reportArgumentType]
@@ -339,21 +347,29 @@ class Overturning:
                 toe_super_unit_load=toe_super_unit_load,
                 heel_super_unit_load=heel_super_unit_load,
                 unit_weight=unit_weight,
-                optimize_solution=solution
+                optimize_solution=solution,
             )
         else:
             return cls(
-                toe_length=float(bounds.lb[0]) if bounds.lb[0] == bounds.ub[0] else np.nan,
-                heel_length=float(bounds.lb[1]) if bounds.lb[1] == bounds.ub[1] else np.nan,
-                height=float(bounds.lb[2]) if bounds.lb[2] == bounds.ub[2] else np.nan,
-                width=float(bounds.lb[3]) if bounds.lb[3] == bounds.ub[3] else np.nan,
+                toe_length=float(bounds.lb[0])
+                if bounds.lb[0] == bounds.ub[0]
+                else np.nan,
+                heel_length=float(bounds.lb[1])
+                if bounds.lb[1] == bounds.ub[1]
+                else np.nan,
+                height=float(bounds.lb[2])
+                if bounds.lb[2] == bounds.ub[2]
+                else np.nan,
+                width=float(bounds.lb[3])
+                if bounds.lb[3] == bounds.ub[3]
+                else np.nan,
                 bearing_length=bearing_length,
                 overturning_moment=overturning_moment,
                 superimposed_load=superimposed_load,
                 toe_super_unit_load=toe_super_unit_load,
                 heel_super_unit_load=heel_super_unit_load,
                 unit_weight=unit_weight,
-                optimize_solution=solution
+                optimize_solution=solution,
             )
 
     """''''''''''''''''''''"""
@@ -404,33 +420,37 @@ class Overturning:
         float
             Calculated Safety Factor
         """
-        l = l_t + l_h + l_brg # total footing length
+        l = l_t + l_h + l_brg  # total footing length
 
         # return infinite safety factor if M_ot is nearly zero
         if np.isclose(M_ot, 0.0):
             return np.inf
 
         M_r = (
-            _1_2*b*w_t*l_t**2 +                       # toe surcharge
-            W*(l_t + _1_2*l_brg) +                    # load
-            _1_2*b*w_h*l_h*(l_t + l_brg + _1_2*l_h) + # heel surcharge
-            _1_2*b*gamma_c*h*l**2                     # footing weight
+            _1_2 * b * w_t * l_t**2  # toe surcharge
+            + W * (l_t + _1_2 * l_brg)  # load
+            + _1_2
+            * b
+            * w_h
+            * l_h
+            * (l_t + l_brg + _1_2 * l_h)  # heel surcharge
+            + _1_2 * b * gamma_c * h * l**2  # footing weight
         )
 
-        return M_r/M_ot
+        return M_r / M_ot
 
     @staticmethod
     def calc_bearing(
-            l_t: float,
-            l_h: float,
-            l_brg: float,
-            h: float,
-            b: float,
-            M_ot: float,
-            W: float,
-            w_t: float,
-            w_h: float,
-            gamma_c: float,
+        l_t: float,
+        l_h: float,
+        l_brg: float,
+        h: float,
+        b: float,
+        M_ot: float,
+        W: float,
+        w_t: float,
+        w_h: float,
+        gamma_c: float,
     ) -> tuple[float, float]:
         """
         Compute the maximum and minimum bearing pressures.
@@ -469,27 +489,31 @@ class Overturning:
         s = _1_6 * l**2
 
         # Total Downwards Load
-        N = (b*l_t*w_t +    # toe surcharge
-            W +            # load
-            b*l_h*w_h +    # heel surcharge
-            gamma_c*b*l*h) # footing weight
+        N = (
+            b * l_t * w_t  # toe surcharge
+            + W  # load
+            + b * l_h * w_h  # heel surcharge
+            + gamma_c * b * l * h
+        )  # footing weight
 
         # Resisting Moment
-        M_r = (_1_2*b*w_t*l_t**2 +             # toe surcharge
-            W*(l_t + _1_2*l_brg) +          # load
-            _1_2*b*w_h*l_h*(l - _1_2*l_h) + # heel surcharge
-            _1_2*gamma_c*b*h*l**2)          # footing weight
+        M_r = (
+            _1_2 * b * w_t * l_t**2  # toe surcharge
+            + W * (l_t + _1_2 * l_brg)  # load
+            + _1_2 * b * w_h * l_h * (l - _1_2 * l_h)  # heel surcharge
+            + _1_2 * gamma_c * b * h * l**2
+        )  # footing weight
 
-        x0 = (M_r - M_ot)/N # Distance from toe to reaction.
-        ecc = _1_2*l - x0   # Eccentricity from footing centerline.
+        x0 = (M_r - M_ot) / N  # Distance from toe to reaction.
+        ecc = _1_2 * l - x0  # Eccentricity from footing centerline.
 
         if x0 < 0:
             return np.inf, -np.inf
 
         if np.abs(ecc) > _1_6:
-            return _2_3*N/x0, 0
+            return _2_3 * N / x0, 0
 
-        return N/l + np.abs(M_r - M_ot)/s, N/l - np.abs(M_r - M_ot)/s
+        return N / l + np.abs(M_r - M_ot) / s, N / l - np.abs(M_r - M_ot) / s
 
     """''''''''''''''''''''''"""
     """  PROTECTED METHODS   """
@@ -497,10 +521,10 @@ class Overturning:
 
     @staticmethod
     def _make_bounds(
-            l_t: np.ndarray,
-            l_h: np.ndarray,
-            h: np.ndarray,
-            b: np.ndarray,
+        l_t: np.ndarray,
+        l_h: np.ndarray,
+        h: np.ndarray,
+        b: np.ndarray,
     ) -> Bounds:
         bmin, bmax = list[float](), list[float]()
 

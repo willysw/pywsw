@@ -1,7 +1,7 @@
 from rich.console import Console
-from rich.prompt import FloatPrompt, Prompt
 
 from pywsw.analysis.fasteners import Dowel
+from pywsw.cli.prompt import FloatPrompt, Prompt
 
 from .dowel_types import DowelFastener, DowelInfo, DowelMember
 
