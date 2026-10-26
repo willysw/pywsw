@@ -1,3 +1,3 @@
-from . import fasteners, foundations
+from . import beam, fasteners, foundations
 
-__all__ = ("fasteners", "foundations")
+__all__ = ("beam", "fasteners", "foundations")
