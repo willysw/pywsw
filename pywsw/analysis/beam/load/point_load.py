@@ -8,7 +8,7 @@ from numpy.typing import NDArray
 from .load_base import LoadBase
 
 
-@dataclass
+@dataclass(frozen=True)
 class PointLoad(LoadBase):
     load: float
     _: KW_ONLY

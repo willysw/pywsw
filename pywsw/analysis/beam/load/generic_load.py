@@ -12,7 +12,7 @@ from .load_base import LoadBase
 LoadFuncType = Callable[[NDArray[float]], NDArray[float]] | None
 
 
-@dataclass
+@dataclass(frozen=True)
 class GenericLoad(LoadBase):
     _: KW_ONLY
     load_func: LoadFuncType = field(default=None, repr=False)

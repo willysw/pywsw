@@ -9,7 +9,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 
-@dataclass
+@dataclass(frozen=True)
 class LoadBase(ABC):
     _: KW_ONLY
     offset: float = 0.0

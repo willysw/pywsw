@@ -8,7 +8,7 @@ from numpy.typing import NDArray
 from .load_base import LoadBase
 
 
-@dataclass
+@dataclass(frozen=True)
 class UniformLoad(LoadBase):
     load: float
 
