@@ -10,6 +10,8 @@ from pywsw.analysis.beam import (
     Vec,
     add_to_global_matrix,
     add_to_global_vector,
+    get_empty_global_matrix,
+    get_local_element_vectors,
     load,
     solve_system,
 )
@@ -28,7 +30,7 @@ z = [0, np.nan, 0, np.nan, 0, np.nan]
 r = [np.nan, 0, np.nan, 0, np.nan, 0]
 
 n = 6
-K: Mat = np.zeros((n, n), dtype=float)
+K: Mat = get_empty_global_matrix(3, BeamDOF.DOF)
 f: Vec = np.zeros((n,), dtype=float)
 for n0, n1, Ki, fi in zip(count(0), count(1), Ke, fe):
     K = add_to_global_matrix(n0, n1, K, Ki)
@@ -36,13 +38,12 @@ for n0, n1, Ki, fi in zip(count(0), count(1), Ke, fe):
 
 rs, zs = solve_system(K, z, f, r)
 
-zel = zs[0:4]
-fel = np.linalg.matmul(Ke[0], zel) + fe[0]
+ze: Mat = get_local_element_vectors(zs, ((0, 1), (1, 2)), BeamDOF.DOF)
+fel: Mat = np.array(
+    [np.linalg.matmul(Ke[j], ze[j]) + fe[j] for j in range(len(l))]
+)
 
-xe: list[Vec] = [np.linspace(0.0, li, 10) for li in l]
-ome: list[list[Arr]] = [
-    [wj.omega(xej, nk) for nk in (0, 1, 2, 3)] for wj, xej in zip(w, xe)
-]
 
-with np.printoptions(precision=2):
-    print(ome)
+with np.printoptions(precision=3):
+    print(ze)
+    print(fel)

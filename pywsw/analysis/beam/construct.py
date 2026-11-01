@@ -1,9 +1,17 @@
 __all__ = (
     "add_to_global_matrix",
     "add_to_global_vector",
+    "get_empty_global_matrix",
 )
 
+import numpy as np
+
 from .types import Mat, TagType, Vec
+
+
+def get_empty_global_matrix(nodes: int, DOF: int) -> Mat:
+    n = nodes * DOF
+    return np.zeros((n, n), dtype=np.float64)
 
 
 def add_to_global_matrix(
