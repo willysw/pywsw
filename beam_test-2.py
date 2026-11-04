@@ -1,14 +1,16 @@
-import numpy as np  # noqa: F401
+import matplotlib.pyplot as plt
+import numpy as np
 from rich.pretty import pprint as pp
 
-from pywsw.analysis.beam import (
+from pywsw.analysis.fem import (
     Element,
     Node,
     dof,
+    get_local_element_vectors,
     load,
     solve_system,
 )
-from pywsw.analysis.beam.types import (
+from pywsw.analysis.fem.types import (
     DOFType,
     ElementList,
     IndexType,
@@ -93,3 +95,32 @@ pp(Zo)
 R, Z = solve_system(K, Zo, Ffe, Ro)
 pp(R)
 pp(Z)
+
+ze = get_local_element_vectors(Z, [_t for _t, _ in elems], DOF.DOF)
+
+x: Mat = np.asarray([np.linspace(0.0, _l, 100, dtype=float) for _l in l])
+sols = [
+    DOF.compute_internals(
+        x[_i],
+        ze[_i],
+        length=l[_i],
+        loads=loads[_i],
+        material=_elem.material,
+        section=_elem.section,
+    )
+    for _i, (_, _elem) in enumerate(elems)
+]
+
+x_o = np.concat([(0.0,), np.cumsum(l)])
+fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
+for _ax in (ax1, ax2, ax3, ax4):
+    _ax.grid(True, which="both")
+    _ax.axhline(0, color="black")
+
+for _xo, _x, _s in zip(x_o, x, sols):
+    ax1.plot(_x + _xo, _s.Fx[0])
+    ax3.plot(_x + _xo, _s.Fx[1])
+    ax2.plot(_x + _xo, _s.Zx[1])
+    ax4.plot(_x + _xo, _s.Zx[0])
+
+plt.show()

@@ -7,6 +7,7 @@ import numpy as np
 
 from ..construct import add_to_global_matrix, add_to_global_vector
 from ..types import (
+    DOFInternals,
     DOFType,
     ElementList,
     IndexType,
@@ -89,17 +90,50 @@ class DOFBase(DOFType):
             N vector of fixed-end forces where N is 2*DOF.
         """
 
+    @classmethod
+    def compute_internals(
+        cls,
+        x: float | Iterable[float],
+        Z: Vec,
+        *,
+        length: float,
+        loads: Iterable[LoadType],
+        material: MaterialType,
+        section: SectionType,
+    ) -> DOFInternals:
+        """Compute internal forces and displacements.
+
+        Parameters
+        ----------
+        x : float | Iterable[float]
+            Locations at which to compute.
+        Z : Vec
+            Element displacement vector.
+        length : float
+            Element length.
+        loads : Iterable[LoadType]
+            Applied loads.
+        material : MaterialType
+        section : SectionType
+
+        Returns
+        -------
+        InternalFZ
+        """
+
     """╔══════════════════════════════════════════════════════════╗
        ║                      Common Methods                      ║
        ╚══════════════════════════════════════════════════════════╝"""
 
     @classmethod
     def get_empty_global_matrix(cls, node_count: int) -> Mat:
+        """Return an empty NxN matrix where N is `DOF*node_count`."""
         n = cls.DOF * node_count
         return np.zeros((n, n), dtype=np.float64)
 
     @classmethod
     def get_empty_global_vector(cls, node_count: int) -> Mat:
+        """Return an empty N vector where N is `DOF*node_count`."""
         n = cls.DOF * node_count
         return np.zeros((n,), dtype=np.float64)
 
@@ -133,6 +167,22 @@ class DOFBase(DOFType):
         *,
         lengths: Iterable[float] | None = None,
     ) -> tuple[Mat, ...]:
+        """Compute stiffness matrices for each element.
+
+        Parameters
+        ----------
+        elems : Iterable[((n0, n1), Element)]
+            Elements and their connectivity. `n0` and `n1` are the indices of the nodes in `nodes`.
+        nodes : Iterable[Node]
+            Nodes.
+        lengths : Iterable[float], optional
+            Iterable of lengths. If provided, the lengths will not be recomputed.
+
+        Returns
+        -------
+        tuple[Array2D, ...]
+            A tuple of stiffness matrices for each element.
+        """
         if lengths is None:
             lengths: Vec = cls.get_element_lengths(elems, nodes)
         return tuple(
@@ -149,6 +199,24 @@ class DOFBase(DOFType):
         *,
         lengths: Iterable[float] | None = None,
     ) -> tuple[Vec, ...]:
+        """Compute fixed-end force vectors for each element.
+
+        Parameters
+        ----------
+        elems : Iterable[((n0, n1), Element)]
+            Elements and their connectivity. `n0` and `n1` are the indices of the nodes in `nodes`.
+        nodes : Iterable[Node]
+            Nodes.
+        loads : Iterable[Iterable[Load]]
+            A list of lists of loads. loads[i] will be applied to elems[i].
+        lengths : Iterable[float], optional
+            Iterable of lengths. If provided, the lengths will not be recomputed.
+
+        Returns
+        -------
+        tuple[Array1D, ...]
+            A tuple of fixed-end force vectors for each element.
+        """
         if lengths is None:
             lengths: Vec = cls.get_element_lengths(elems, nodes)
         return tuple(
@@ -164,6 +232,22 @@ class DOFBase(DOFType):
         *,
         elem_matrices: Iterable[Mat] | None = None,
     ) -> Mat:
+        """Compute the global stiffness matrix.
+
+        Parameters
+        ----------
+        elems : Iterable[((n0, n1), Element)]
+            Elements and their connectivity. `n0` and `n1` are the indices of the nodes in `nodes`.
+        nodes : Iterable[Node]
+            Nodes.
+        elem_matrices : Iterable[Mat], optional
+            If provided, these stiffness matrices will be used instead of recomputed.
+
+        Returns
+        -------
+        K : Array2D
+            Global stiffness matrix.
+        """
         if elem_matrices is None:
             elem_matrices: tuple[Mat] = cls.build_local_stiffness_matrices(
                 elems, nodes
@@ -182,6 +266,24 @@ class DOFBase(DOFType):
         *,
         fixed_end_vecs: Iterable[Vec] | None = None,
     ) -> Vec:
+        """Compute the global fixed-end force vector.
+
+        Parameters
+        ----------
+        elems : Iterable[((n0, n1), Element)]
+            Elements and their connectivity. `n0` and `n1` are the indices of the nodes in `nodes`.
+        nodes : Iterable[Node]
+            Nodes.
+        loads : Iterable[Iterable[Load]]
+            A list of lists of loads. loads[i] will be applied to elems[i].
+        fixed_end_vecs : Iterable[Vec], optional
+            If provided, these vectors will be used instead of recomputing. `loads` will be ignored.
+
+        Returns
+        -------
+        Ffe : Array1D
+            Global fixed-end force vector.
+        """
         if fixed_end_vecs is None:
             if loads is None:
                 raise ValueError(
@@ -199,8 +301,25 @@ class DOFBase(DOFType):
     def build_global_unknown_vectors(
         cls,
         nodes: NodeList,
-        supports: Mapping[IndexType, Vec],
+        supports: Mapping[IndexType, Iterable[float]],
     ) -> tuple[Vec, Vec]:
+        """Build unknown vectors for the solver.
+
+        This builds vectors where unknowns are NaN and knowns are 0.0. These
+        are used during solving to partition the matrices and vectors.
+
+        Parameters
+        ----------
+        nodes : Iterable[Node]
+            Nodes.
+        supports : Mapping[int, Iterable[float]]
+            A dictionary where the key is the index of a Node in nodes, and the Iterable of floats is the support condition.
+
+        Returns
+        -------
+        R, Z : (Array1D, Array1D)
+            Unkown reaction and displacement vectors.
+        """
         num_nodes = len(nodes)
         R: Vec = cls.get_empty_global_vector(num_nodes)
         for _i, _vec in supports.items():
