@@ -1,9 +1,10 @@
-from . import dof, load
+from . import dof, load, types
 from .construct import (
     add_to_global_matrix,
     add_to_global_vector,
     get_empty_global_matrix,
 )
+from .core import Element, Material, Node, Section
 from .deconstruct import (
     get_local_element_vector,
     get_local_element_vectors,
@@ -11,17 +12,13 @@ from .deconstruct import (
     get_local_vectors,
 )
 from .solver import solve_system
-from .types import Arr, Element, LoadType, Mat, Node, TagType, Vec
 
 __all__ = (
-    "Arr",
-    "BeamLoads",
-    "BeamSystem",
     "Element",
-    "LoadType",
     "Mat",
+    "Material",
     "Node",
-    "TagType",
+    "Section",
     "Vec",
     "add_to_global_matrix",
     "add_to_global_vector",
@@ -34,4 +31,5 @@ __all__ = (
     "get_local_vectors",
     "load",
     "solve_system",
+    "types",
 )

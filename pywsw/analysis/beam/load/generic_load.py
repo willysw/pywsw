@@ -4,26 +4,26 @@ from collections.abc import Callable
 from dataclasses import KW_ONLY, dataclass, field
 
 import numpy as np
-from numpy.typing import NDArray
 from scipy.integrate import cumulative_simpson, quad
 
+from ..types import Vec
 from .load_base import LoadBase
 
-LoadFuncType = Callable[[NDArray[float]], NDArray[float]] | None
+LoadFuncType = Callable[[Vec], Vec]
 
 
 @dataclass(frozen=True)
 class GenericLoad(LoadBase):
     _: KW_ONLY
-    load_func: LoadFuncType = field(default=None, repr=False)
+    load_func: LoadFuncType | None = field(default=None, repr=False)
 
-    def w_fn(self, x: NDArray[float]) -> NDArray[float]:
+    def w_fn(self, x: Vec) -> Vec:
         if self.load_func is None:
             return np.full_like(x, 0.0)
         else:
             return self._return(self.load_func(x - self.offset))
 
-    def omega_fn(self, x: NDArray[float], n: int) -> NDArray[float]:
+    def omega_fn(self, x: Vec, n: int) -> Vec:
         if self.load_func is None:
             return np.zeros_like(x)
 

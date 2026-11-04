@@ -1,16 +1,15 @@
 __all__ = ("LoadBase",)
 
-from abc import ABC, abstractmethod
-from collections.abc import Iterable
+from abc import abstractmethod
 from dataclasses import KW_ONLY, dataclass, field
-from typing import overload
 
 import numpy as np
-from numpy.typing import NDArray
+
+from ..types import LoadType, Vec
 
 
 @dataclass(frozen=True)
-class LoadBase(ABC):
+class LoadBase(LoadType):
     _: KW_ONLY
     offset: float = 0.0
     x_start: float = field(default=0.0, repr=False)
@@ -19,28 +18,16 @@ class LoadBase(ABC):
     """ ABSTRACT METHODS """
 
     @abstractmethod
-    def w_fn(self, x: NDArray[float]) -> NDArray[float]: ...
+    def w_fn(self, x: Vec) -> Vec: ...
 
     @abstractmethod
-    def omega_fn(self, x: NDArray[float], n: int) -> NDArray[float]: ...
+    def omega_fn(self, x: Vec, n: int) -> Vec: ...
 
     """ CLASS METHODS """
 
-    @overload
-    def __call__(self, x: float) -> float: ...
-    @overload
-    def __call__(self, x: NDArray[float]) -> NDArray[float]: ...
-    @overload
-    def __call__(self, x: Iterable[float]) -> NDArray[float]: ...
     def __call__(self, x):
         return self._return(self.omega(x, 0))
 
-    @overload
-    def w(self, x: float) -> float: ...
-    @overload
-    def w(self, x: NDArray[float]) -> NDArray[float]: ...
-    @overload
-    def w(self, x: Iterable[float]) -> NDArray[float]: ...
     def w(self, x):
         x = np.asarray(x, dtype=np.float64)
         x_max = x.max()
@@ -57,12 +44,6 @@ class LoadBase(ABC):
 
         return self._return(w)
 
-    @overload
-    def omega(self, x: float, n: int) -> float: ...
-    @overload
-    def omega(self, x: NDArray[float], n: int) -> NDArray[float]: ...
-    @overload
-    def omega(self, x: Iterable[float], n: int) -> NDArray[float]: ...
     def omega(self, x, n):
         x = np.asarray(x, dtype=np.float64)
         x_max = x.max()
@@ -83,7 +64,7 @@ class LoadBase(ABC):
     """ STATIC METHODS """
 
     @staticmethod
-    def _return(val: NDArray[float]) -> float | NDArray[float]:
+    def _return(val: Vec) -> float | Vec:
         if val.size == 1:
             return val.item()
         else:

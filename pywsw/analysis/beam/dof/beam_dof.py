@@ -2,7 +2,7 @@ from collections.abc import Iterable
 
 import numpy as np
 
-from ..types import LoadType, Mat, Vec
+from ..types import LoadType, Mat, MaterialType, SectionType, Vec
 from .dof_base import DOFBase
 
 
@@ -13,18 +13,13 @@ class BeamDOF(DOFBase):
     def stiffness_matrix(
         cls,
         length: float,
-        *,
-        E_a: float = 1.0,
-        E_b: float = 1.0,
-        E_v: float = 1.0,
-        A_a: float = 1.0,
-        A_v: float = 1.0,
-        I_b: float = 1.0,
+        material: MaterialType,
+        section: SectionType,
     ) -> Mat:
         L, L2, L3 = length, length**2, length**3
         return (
-            E_b
-            * I_b
+            material.E_b
+            * section.I_b
             * np.array(
                 [
                     [-12 / L3, -6 / L2, 12 / L3, -6 / L2],
