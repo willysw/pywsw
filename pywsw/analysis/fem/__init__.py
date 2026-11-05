@@ -14,6 +14,7 @@ from .solver import solve_system
 
 __all__ = (
     "Element",
+    "LoadMap",
     "Mat",
     "Material",
     "Node",
